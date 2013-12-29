@@ -836,6 +836,7 @@
       cols: [],
       rows: [],
       vals: [],
+      exclusions: {},
       unusedAttrsVertical: false,
       autoSortUnusedAttrs: false,
       rendererOptions: null,
@@ -900,7 +901,7 @@
       });
       uiTable = $("<table class='table table-bordered' cellpadding='5'>");
       rendererControl = $("<td>");
-      renderer = $("<select id='renderer'>").bind("change", function() {
+      renderer = $("<select class='pvtRenderer'>").bind("change", function() {
         return refresh();
       });
       _ref1 = opts.renderers;
@@ -909,7 +910,7 @@
         renderer.append($("<option>").val(x).text(x));
       }
       rendererControl.append(renderer);
-      colList = $("<td id='unused' class='pvtAxisContainer'>");
+      colList = $("<td class='pvtAxisContainer pvtUnused'>");
       if (opts.unusedAttrsVertical) {
         colList.addClass('pvtVertList');
       } else {
@@ -927,7 +928,7 @@
         return _results;
       })();
       _fn = function(c) {
-        var attrElem, btns, filterItem, keys, v, valueList, _j, _len1, _ref2;
+        var attrElem, btns, filterItem, filterItemExcluded, hasExcludedItem, keys, v, valueList, _j, _len1, _ref2;
         keys = (function() {
           var _results;
           _results = [];
@@ -936,6 +937,7 @@
           }
           return _results;
         })();
+        hasExcludedItem = false;
         valueList = $("<div>").addClass('pvtFilterBox').css({
           "z-index": 100,
           "width": "280px",
@@ -971,12 +973,17 @@
             k = _ref2[_j];
             v = axisValues[c][k];
             filterItem = $("<label>");
-            filterItem.append($("<input type='checkbox' class='pvtFilter'>").attr("checked", true).data("filter", [c, k]));
+            filterItemExcluded = opts.exclusions[c] ? (__indexOf.call(opts.exclusions[c], k) >= 0) : false;
+            hasExcludedItem || (hasExcludedItem = filterItemExcluded);
+            filterItem.append($("<input type='checkbox' class='pvtFilter'>").attr("checked", !filterItemExcluded).data("filter", [c, k]));
             filterItem.append($("<span>").text("" + k + " (" + v + ")"));
             valueList.append($("<p>").append(filterItem));
           }
         }
-        attrElem = $("<li class='label label-info' id='axis_" + i + "'>").append($("<nobr>").text(c));
+        attrElem = $("<li class='label label-info axis_" + i + "'>").append($("<nobr>").text(c));
+        if (hasExcludedItem) {
+          attrElem.addClass('pvtFilteredAttribute');
+        }
         colList.append(attrElem).append(valueList);
         return attrElem.bind("dblclick", function(e) {
           valueList.css({
@@ -1004,7 +1011,7 @@
         _fn(c);
       }
       tr1 = $("<tr>");
-      aggregator = $("<select id='aggregator'>").css("margin-bottom", "5px").bind("change", function() {
+      aggregator = $("<select class='pvtAggregator'>").css("margin-bottom", "5px").bind("change", function() {
         return refresh();
       });
       _ref2 = opts.aggregators;
@@ -1012,11 +1019,11 @@
         if (!__hasProp.call(_ref2, x)) continue;
         aggregator.append($("<option>").val(x).text(x));
       }
-      tr1.append($("<td id='vals' class='pvtAxisContainer pvtHorizList'>").css("text-align", "center").append(aggregator).append($("<br>")));
-      tr1.append($("<td id='cols' class='pvtAxisContainer pvtHorizList'>"));
+      tr1.append($("<td class='pvtAxisContainer pvtHorizList pvtVals'>").css("text-align", "center").append(aggregator).append($("<br>")));
+      tr1.append($("<td class='pvtAxisContainer pvtHorizList pvtCols'>"));
       uiTable.append(tr1);
       tr2 = $("<tr>");
-      tr2.append($("<td valign='top' id='rows' class='pvtAxisContainer'>"));
+      tr2.append($("<td valign='top' class='pvtAxisContainer pvtRows'>"));
       pivotTable = $("<td valign='top' class='pvtRendererArea'>");
       tr2.append(pivotTable);
       uiTable.append(tr2);
@@ -1030,23 +1037,23 @@
       _ref3 = opts.cols;
       for (_j = 0, _len1 = _ref3.length; _j < _len1; _j++) {
         x = _ref3[_j];
-        this.find("#cols").append(this.find("#axis_" + (shownAttributes.indexOf(x))));
+        this.find(".pvtCols").append(this.find(".axis_" + (shownAttributes.indexOf(x))));
       }
       _ref4 = opts.rows;
       for (_k = 0, _len2 = _ref4.length; _k < _len2; _k++) {
         x = _ref4[_k];
-        this.find("#rows").append(this.find("#axis_" + (shownAttributes.indexOf(x))));
+        this.find(".pvtRows").append(this.find(".axis_" + (shownAttributes.indexOf(x))));
       }
       _ref5 = opts.vals;
       for (_l = 0, _len3 = _ref5.length; _l < _len3; _l++) {
         x = _ref5[_l];
-        this.find("#vals").append(this.find("#axis_" + (shownAttributes.indexOf(x))));
+        this.find(".pvtVals").append(this.find(".axis_" + (shownAttributes.indexOf(x))));
       }
       if (opts.aggregatorName != null) {
-        this.find("#aggregator").val(opts.aggregatorName);
+        this.find(".pvtAggregator").val(opts.aggregatorName);
       }
       if (opts.rendererName != null) {
-        this.find("#renderer").val(opts.rendererName);
+        this.find(".pvtRenderer").val(opts.rendererName);
       }
       refresh = function() {
         var exclusions, natSort, subopts, unusedAttrsContainer, vals;
@@ -1058,29 +1065,35 @@
           rows: []
         };
         vals = [];
-        _this.find("#rows li nobr").each(function() {
+        _this.find(".pvtRows li nobr").each(function() {
           return subopts.rows.push($(this).text());
         });
-        _this.find("#cols li nobr").each(function() {
+        _this.find(".pvtCols li nobr").each(function() {
           return subopts.cols.push($(this).text());
         });
-        _this.find("#vals li nobr").each(function() {
+        _this.find(".pvtVals li nobr").each(function() {
           return vals.push($(this).text());
         });
         subopts.aggregator = opts.aggregators[aggregator.val()](vals);
         subopts.renderer = opts.renderers[renderer.val()];
-        exclusions = [];
+        exclusions = {};
         _this.find('input.pvtFilter').not(':checked').each(function() {
-          return exclusions.push($(this).data("filter"));
+          var filter;
+          filter = $(this).data("filter");
+          if (exclusions[filter[0]] != null) {
+            return exclusions[filter[0]].push(filter[1]);
+          } else {
+            return exclusions[filter[0]] = [filter[1]];
+          }
         });
         subopts.filter = function(record) {
-          var v, _len4, _m, _ref6;
+          var excludedItems, _ref6;
           if (!opts.filter(record)) {
             return false;
           }
-          for (_m = 0, _len4 = exclusions.length; _m < _len4; _m++) {
-            _ref6 = exclusions[_m], k = _ref6[0], v = _ref6[1];
-            if (("" + record[k]) === v) {
+          for (k in exclusions) {
+            excludedItems = exclusions[k];
+            if (_ref6 = record[k], __indexOf.call(excludedItems, _ref6) >= 0) {
               return false;
             }
           }
@@ -1091,6 +1104,7 @@
           cols: subopts.cols,
           rows: subopts.rows,
           vals: vals,
+          exclusions: exclusions,
           hiddenAttributes: opts.hiddenAttributes,
           renderers: opts.renderers,
           aggregators: opts.aggregators,
@@ -1102,7 +1116,7 @@
         });
         if (opts.autoSortUnusedAttrs) {
           natSort = $.pivotUtilities.naturalSort;
-          unusedAttrsContainer = $("td#unused.pvtAxisContainer");
+          unusedAttrsContainer = _this.find("td.pvtUnused.pvtAxisContainer");
           $(unusedAttrsContainer).children("li").sort(function(a, b) {
             return natSort($(a).text(), $(b).text());
           }).appendTo(unusedAttrsContainer);
@@ -1113,7 +1127,7 @@
       };
       refresh();
       this.find(".pvtAxisContainer").sortable({
-        connectWith: ".pvtAxisContainer",
+        connectWith: this.find(".pvtAxisContainer"),
         items: 'li'
       }).bind("sortstop", refresh);
     } catch (_error) {
